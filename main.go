@@ -11,10 +11,20 @@ import (
 	"syscall"
 	"time"
 
+	"transcription/utils"
+
+	"flag"
+
 	"github.com/joho/godotenv"
 )
 
+const defaultDescriptionAttempts = 3
+
 func main() {
+	// Define command-line flags
+	descriptionCount := flag.Int("descriptions", defaultDescriptionAttempts, "Number of descriptions to generate for each video")
+	flag.Parse()
+
 	// Load environment variables from .env file
 	err := godotenv.Load()
 	if err != nil {
@@ -30,22 +40,10 @@ func main() {
 	// Clean up .tmp directory at startup
 	cleanupTmpDir(tmpDir)
 
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: go run main.go <video_file_path>")
+	if flag.NArg() < 1 {
+		log.Fatal("Usage: go run main.go [-descriptions <number>] \"<video_file_path_or_directory>\"")
 	}
-	videoFile := os.Args[1]
-	audioFile := filepath.Join(tmpDir, fmt.Sprintf("output_%d.wav", time.Now().Unix()))
-
-	// Check if the audio file already exists
-	if _, err := os.Stat(audioFile); err == nil {
-		fmt.Printf("File '%s' already exists. Overwrite? [y/N] ", audioFile)
-		var response string
-		fmt.Scanln(&response)
-		if strings.ToLower(response) != "y" {
-			fmt.Println("Not overwriting - exiting")
-			return
-		}
-	}
+	inputPath := flag.Arg(0)
 
 	// Create a context that is cancelled on interrupt signal
 	ctx, cancel := context.WithCancel(context.Background())
@@ -62,24 +60,73 @@ func main() {
 		os.Exit(1)
 	}()
 
-	err = extractAudio(ctx, videoFile, audioFile)
+	// Check if the input path is a directory or a file
+	info, err := os.Stat(inputPath)
 	if err != nil {
-		log.Fatalf("Failed to extract audio: %v", err)
+		log.Fatalf("Failed to stat input path: %v", err)
 	}
 
-	transcription, err := transcribeAudio(audioFile)
-	if err != nil {
-		log.Fatalf("Failed to transcribe audio: %v", err)
+	if info.IsDir() {
+		// Process directory
+		outputXML := "transcription_results.xml"
+		results, err := utils.ProcessDirectory(
+			ctx,
+			inputPath,
+			outputXML,
+			*descriptionCount,
+			&utils.RealAudioExtractor{},
+			&utils.RealAudioTranscriber{},
+			&utils.RealDescriptionGenerator{},
+			&utils.RealDescriptionEvaluator{},
+		)
+		if err != nil {
+			log.Fatalf("Failed to process directory: %v", err)
+		}
+		fmt.Printf("Transcription results saved to %s\n", outputXML)
+		fmt.Printf("Processed %d video(s)\n", len(results.Results))
+	} else {
+		// Process single file
+		audioFile := filepath.Join(tmpDir, fmt.Sprintf("output_%d.wav", time.Now().Unix()))
+
+		// Check if the audio file already exists
+		if _, err := os.Stat(audioFile); err == nil {
+			fmt.Printf("File '%s' already exists. Overwrite? [y/N] ", audioFile)
+			var response string
+			fmt.Scanln(&response)
+			if strings.ToLower(response) != "y" {
+				fmt.Println("Not overwriting - exiting")
+				return
+			}
+		}
+
+		extractor := &utils.RealAudioExtractor{}
+		hasAudio, err := extractor.ExtractAudio(ctx, inputPath, audioFile)
+		if err != nil {
+			log.Fatalf("Failed to extract audio: %v", err)
+		}
+
+		if !hasAudio {
+			log.Fatalf("No audio found in the video file")
+		}
+
+		transcriber := &utils.RealAudioTranscriber{}
+		transcription, err := transcriber.TranscribeAudio(audioFile, 5*time.Minute)
+		if err != nil {
+			log.Fatalf("Failed to transcribe audio: %v", err)
+		}
+
+		fmt.Println("Transcription:", transcription)
+
+		descriptions, err := utils.GenerateDescriptions(transcription, filepath.Base(inputPath), *descriptionCount)
+		if err != nil {
+			log.Fatalf("Failed to generate descriptions: %v", err)
+		}
+
+		fmt.Println("Descriptions:")
+		for i, desc := range descriptions {
+			fmt.Printf("%d: %s\n", i+1, desc)
+		}
 	}
-
-	fmt.Println("Transcription:", transcription)
-
-	description, err := GenerateDescription(transcription)
-	if err != nil {
-		log.Fatalf("Failed to generate description: %v", err)
-	}
-
-	fmt.Println("Description:", description)
 
 	// Clean up .tmp directory at exit
 	cleanupTmpDir(tmpDir)
