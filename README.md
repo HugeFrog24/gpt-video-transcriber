@@ -38,13 +38,12 @@ This solution aims to alleviate the stress and time investment required to manua
 
 ## Project Status
 
-This project is in development and not production-ready. The following improvements are necessary:
+⚠️ This project is in development and **not production-ready**. The following improvements are necessary:
 
 - [ ] **Configurable AI Prompt**: The AI prompt is hardcoded with a specific channel name (HugeFrog24). It needs to be configurable for different users and use cases.
-
 - [ ] **Improved Error Handling**: Error handling for large texts needs enhancement to ensure robustness.
 
-## How to Use
+## Usage
 
 ### For Developers
 
