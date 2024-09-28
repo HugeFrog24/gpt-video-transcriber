@@ -6,11 +6,18 @@ This tool helps content creators and video enthusiasts recover lost metadata for
 
 ## Key features:
 
-1. Audio Extraction: Extracts audio from video files for transcription.
-2. Transcription: Converts extracted audio into text.
-3. Description Generation: Uses AI to create multiple descriptive summaries based on the transcription.
-4. Description Evaluation: Selects the best description from generated options.
-5. Batch Processing: Handles individual video files and entire directories.
+1. Audio Extraction:
+   - Extracts audio from video files for transcription.
+2. Transcription:
+   - Converts extracted audio into text.
+3. Language Detection:
+   - Identifies the language of the transcribed text.
+4. Text Summarization:
+   - Summarizes long transcriptions to fit within API limits.
+5. Description Generation:
+   - Uses AI to create multiple descriptive summaries based on the transcription.
+6. Description Evaluation:
+   - Selects the best description from generated options.
 
 ## Why It Exists
 
@@ -18,10 +25,10 @@ This project addresses the common problem of losing valuable metadata. Whether d
 
 By automating transcription and description generation, this tool aims to:
 
-1. Save Time: Automates the process of manual transcription and description.
-2. Recover Lost Information: Recreates lost metadata, improving video library organization.
-3. Improve Accessibility: Makes content more accessible to a wider audience, including those with hearing impairments.
-4. Enhance Searchability: Facilitates easier searching within video libraries using accurate transcriptions and descriptions.
+1. Save Time
+2. Recover Lost Information
+3. Improve Accessibility
+4. Enhance Searchability
 
 ## Inspiration
 
