@@ -10,7 +10,7 @@ type AudioExtractor interface {
 }
 
 type AudioTranscriber interface {
-	TranscribeAudio(audioFile string, maxDuration time.Duration) (string, error)
+	TranscribeAudio(ctx context.Context, audioFile string, maxDuration time.Duration) (string, error)
 }
 
 type DescriptionGenerator interface {

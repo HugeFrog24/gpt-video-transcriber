@@ -14,11 +14,11 @@ func (m *MockAudioExtractor) ExtractAudio(ctx context.Context, videoFile, audioF
 }
 
 type MockAudioTranscriber struct {
-	TranscribeAudioFunc func(audioFile string, maxDuration time.Duration) (string, error)
+	TranscribeAudioFunc func(ctx context.Context, audioFile string, maxDuration time.Duration) (string, error)
 }
 
-func (m *MockAudioTranscriber) TranscribeAudio(audioFile string, maxDuration time.Duration) (string, error) {
-	return m.TranscribeAudioFunc(audioFile, maxDuration)
+func (m *MockAudioTranscriber) TranscribeAudio(ctx context.Context, audioFile string, maxDuration time.Duration) (string, error) {
+	return m.TranscribeAudioFunc(ctx, audioFile, maxDuration)
 }
 
 type MockDescriptionGenerator struct {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +28,10 @@ type TranscriptionResult struct {
 type TranscriptionResults struct {
 	XMLName xml.Name              `xml:"TranscriptionResults"`
 	Results []TranscriptionResult `xml:"TranscriptionResult"`
+}
+
+var videoExtensions = map[string]bool{
+	".mp4": true, ".mov": true, ".avi": true, ".mkv": true,
 }
 
 func ProcessDirectory(
@@ -66,35 +71,38 @@ func ProcessDirectory(
 		return TranscriptionResults{}, fmt.Errorf("failed to create .tmp directory: %v", err)
 	}
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".mp4") {
-			// Check if the file has been processed
-			existingResult, exists := processedFiles[path]
-			if exists && len(existingResult.Descriptions) >= descriptionAttempts {
-				fmt.Printf("File '%s' already processed with sufficient descriptions. Skipping...\n", path)
-				return nil
-			}
+		if !d.IsDir() {
+			ext := strings.ToLower(filepath.Ext(d.Name()))
+			if videoExtensions[ext] {
+				// Check if the file has been processed
+				existingResult, exists := processedFiles[path]
+				if exists && len(existingResult.Descriptions) >= descriptionAttempts {
+					fmt.Printf("File '%s' already processed with sufficient descriptions. Skipping...\n", path)
+					return nil
+				}
 
-			// Process the video file (pass existing result if any)
-			result, err := processVideoFile(ctx, path, descriptionAttempts, extractor, transcriber, generator, evaluator, existingResult)
-			if err != nil {
-				return fmt.Errorf("failed to process video file '%s': %v", path, err)
-			}
+				// Process the video file (pass existing result if any)
+				result, err := processVideoFile(ctx, path, descriptionAttempts, extractor, transcriber, generator, evaluator, existingResult)
+				if err != nil {
+					return fmt.Errorf("failed to process video file '%s': %v", path, err)
+				}
 
-			if exists {
-				// Update the existing result
-				*existingResult = result
-			} else {
-				// Add new result
-				results.Results = append(results.Results, result)
-			}
+				if exists {
+					// Update the existing result
+					*existingResult = result
+				} else {
+					// Add new result
+					results.Results = append(results.Results, result)
+				}
 
-			// Write the updated results to the XML file after each video is processed
-			if err := writeXMLFile(outputXML, results); err != nil {
-				return fmt.Errorf("failed to write XML file: %v", err)
+				// Write the updated results to the XML file after each video is processed
+				if err := writeXMLFile(outputXML, results); err != nil {
+					return fmt.Errorf("failed to write XML file: %v", err)
+				}
 			}
 		}
 		return nil
@@ -147,7 +155,7 @@ func processVideoFile(
 		result.AudioFile = audioFile
 
 		// Use the injected transcriber
-		transcription, err := transcriber.TranscribeAudio(audioFile, 5*time.Minute)
+		transcription, err := transcriber.TranscribeAudio(ctx, audioFile, 5*time.Minute)
 		if err != nil {
 			return TranscriptionResult{}, fmt.Errorf("failed to transcribe audio: %v", err)
 		}

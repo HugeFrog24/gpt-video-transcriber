@@ -15,18 +15,22 @@ import (
 
 type RealAudioTranscriber struct{}
 
-func (RealAudioTranscriber) TranscribeAudio(audioFile string, maxDuration time.Duration) (string, error) {
+func (RealAudioTranscriber) TranscribeAudio(ctx context.Context, audioFile string, maxDuration time.Duration) (string, error) {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		return "", fmt.Errorf("OPENAI_API_KEY environment variable is not set")
 	}
 	client := openai.NewClient(apiKey)
-	ctx := context.Background()
 
 	// Split audio into chunks
-	chunks, err := splitAudio(audioFile, maxDuration)
+	chunks, err := splitAudio(ctx, audioFile, maxDuration) // Pass ctx here
 	if err != nil {
 		return "", fmt.Errorf("failed to split audio: %v", err)
+	}
+
+	// Ensure all temporary chunk files are cleaned up
+	for _, chunk := range chunks {
+		defer os.Remove(chunk)
 	}
 
 	var fullTranscription strings.Builder
@@ -43,8 +47,7 @@ func (RealAudioTranscriber) TranscribeAudio(audioFile string, maxDuration time.D
 		fullTranscription.WriteString(resp.Text)
 		fullTranscription.WriteString(" ")
 
-		// Clean up the chunk file
-		os.Remove(chunk)
+		// Temporary file cleanup is handled by defer
 	}
 
 	transcription := strings.TrimSpace(fullTranscription.String())
@@ -59,7 +62,7 @@ func (RealAudioTranscriber) TranscribeAudio(audioFile string, maxDuration time.D
 	return transcription, nil
 }
 
-func splitAudio(audioFile string, maxDuration time.Duration) ([]string, error) {
+func splitAudio(ctx context.Context, audioFile string, maxDuration time.Duration) ([]string, error) {
 	var chunks []string
 
 	// Get audio duration
@@ -75,7 +78,7 @@ func splitAudio(audioFile string, maxDuration time.Duration) ([]string, error) {
 		start := time.Duration(i) * maxDuration
 		chunkFile := fmt.Sprintf("%s_chunk_%d.wav", strings.TrimSuffix(audioFile, filepath.Ext(audioFile)), i)
 
-		cmd := exec.Command("ffmpeg", "-i", audioFile, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFile)
+		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", audioFile, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFile)
 		err := cmd.Run()
 		if err != nil {
 			return chunks, fmt.Errorf("failed to create audio chunk: %v", err)

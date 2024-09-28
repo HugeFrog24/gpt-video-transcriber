@@ -43,7 +43,7 @@ func TestProcessDirectory(t *testing.T) {
 		},
 	}
 	mockTranscriber := &utils.MockAudioTranscriber{
-		TranscribeAudioFunc: func(audioFile string, maxDuration time.Duration) (string, error) {
+		TranscribeAudioFunc: func(ctx context.Context, audioFile string, maxDuration time.Duration) (string, error) {
 			return "Mock transcription", nil
 		},
 	}

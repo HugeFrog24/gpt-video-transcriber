@@ -69,6 +69,10 @@ func main() {
 	if info.IsDir() {
 		// Process directory
 		outputXML := "transcription_results.xml"
+		evaluator, err := utils.NewRealDescriptionEvaluator()
+		if err != nil {
+			log.Fatalf("Failed to create description evaluator: %v", err)
+		}
 		results, err := utils.ProcessDirectory(
 			ctx,
 			inputPath,
@@ -77,7 +81,7 @@ func main() {
 			&utils.RealAudioExtractor{},
 			&utils.RealAudioTranscriber{},
 			&utils.RealDescriptionGenerator{},
-			&utils.RealDescriptionEvaluator{},
+			evaluator,
 		)
 		if err != nil {
 			log.Fatalf("Failed to process directory: %v", err)
@@ -110,7 +114,7 @@ func main() {
 		}
 
 		transcriber := &utils.RealAudioTranscriber{}
-		transcription, err := transcriber.TranscribeAudio(audioFile, 5*time.Minute)
+		transcription, err := transcriber.TranscribeAudio(ctx, audioFile, 5*time.Minute)
 		if err != nil {
 			log.Fatalf("Failed to transcribe audio: %v", err)
 		}
