@@ -31,7 +31,7 @@ type TranscriptionResults struct {
 }
 
 var videoExtensions = map[string]bool{
-	".mp4": true, ".mov": true, ".avi": true, ".mkv": true,
+	".mp4": true, ".mov": true, ".avi": true, ".mkv": true, ".wmv": true,
 }
 
 func ProcessDirectory(
