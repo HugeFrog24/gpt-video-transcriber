@@ -2,7 +2,7 @@
 
 ## What This Project Does
 
-This tool helps content creators and video enthusiasts recover lost metadata for their video files. It automates transcribing video content and generating descriptive summaries, making it easier to organize and understand your video library.
+This tool helps content creators and video enthusiasts create metadata for their videos. It automates transcribing video content and generating descriptive summaries, making it easier to organize and understand your video library.
 
 ## Key features:
 
@@ -23,22 +23,23 @@ This tool helps content creators and video enthusiasts recover lost metadata for
 
 This project addresses the common problem of losing valuable metadata. Whether due to technical issues, platform changes, or accidental deletions, losing video descriptions can be frustrating and time-consuming to recreate.
 
-By automating transcription and description generation, this tool aims to:
+By automating transcription and description generation, this tool:
 
-1. Save Time
-2. Recover Lost Information
-3. Improve Accessibility
-4. Enhance Searchability
+1. Saves Time
+2. Recovers Lost Information
+3. Improves Accessibility
+4. Enhances Searchability
 
 ## Inspiration
 
-The project was inspired by the experience of losing original video metadata. Many creators have faced situations where they've lost access to their original descriptions, tags, and other important information due to platform changes, account suspensions, or data loss.
+The project was inspired by losing original video metadata. Many creators have faced situations where they've lost access to their original descriptions, tags, and other important information due to platform changes, account suspensions, or data loss.
 
-This solution aims to alleviate the stress and time investment required to manually recreate lost metadata, serving as a helpful tool for content creators, archivists, and anyone who values organized and accessible video content.
+This solution alleviates the stress and time investment required to manually recreate lost metadata, serving as a helpful tool for content creators, archivists, and anyone who values organized and accessible video content.
 
 ## Project Status
 
-⚠️ This project is in development and **not production-ready**. The following improvements are necessary:
+> [!WARNING]
+> This project is in development and **not production-ready**. The following improvements are necessary:
 
 - [ ] **Configurable AI Prompt**: The AI prompt is hardcoded with a specific channel name (HugeFrog24). It needs to be configurable for different users and use cases.
 - [ ] **Improved Error Handling**: Error handling for large texts needs enhancement to ensure robustness.
@@ -133,6 +134,7 @@ This solution aims to alleviate the stress and time investment required to manua
 5. **Cleanup:**
    - Temporary files are automatically removed after processing
 
-Note: This tool requires an active internet connection to use the OpenAI API for transcription and description generation.
+> [!NOTE]
+> This tool requires an active internet connection to use the OpenAI API for transcription and description generation.
 
 While this tool is powerful, regularly backing up your original metadata is recommended to prevent future loss.
