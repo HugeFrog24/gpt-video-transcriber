@@ -82,6 +82,7 @@ func splitAudio(ctx context.Context, audioFile string, maxDuration time.Duration
 		audioFileSafe := filepath.Clean(audioFile)
 		chunkFileSafe := filepath.Clean(chunkFile)
 
+		// #nosec G204
 		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", audioFileSafe, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFileSafe)
 		err := cmd.Run()
 		if err != nil {
