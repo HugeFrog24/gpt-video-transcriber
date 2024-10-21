@@ -31,7 +31,7 @@ type TranscriptionResults struct {
 }
 
 var videoExtensions = map[string]bool{
-	".mp4": true, ".mov": true, ".avi": true, ".mkv": true,
+	".mp4": true, ".mov": true, ".avi": true, ".mkv": true, ".wmv": true,
 }
 
 func ProcessDirectory(
@@ -48,7 +48,7 @@ func ProcessDirectory(
 
 	// Read existing XML file if it exists
 	if _, err := os.Stat(outputXML); err == nil {
-		file, err := os.Open(outputXML)
+		file, err := os.Open(filepath.Clean(outputXML))
 		if err != nil {
 			return TranscriptionResults{}, fmt.Errorf("failed to open existing XML file: %v", err)
 		}
@@ -67,7 +67,7 @@ func ProcessDirectory(
 	}
 
 	// Ensure .tmp directory exists
-	if err := os.MkdirAll(".tmp", os.ModePerm); err != nil {
+	if err := os.MkdirAll(".tmp", 0750); err != nil {
 		return TranscriptionResults{}, fmt.Errorf("failed to create .tmp directory: %v", err)
 	}
 
@@ -200,7 +200,7 @@ func processVideoFile(
 }
 
 func writeXMLFile(outputXML string, results TranscriptionResults) error {
-	file, err := os.Create(outputXML)
+	file, err := os.Create(filepath.Clean(outputXML))
 	if err != nil {
 		return fmt.Errorf("failed to create XML file '%s': %v", outputXML, err)
 	}

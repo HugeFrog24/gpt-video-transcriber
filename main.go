@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"transcription/utils"
+	"github.com/HugeFrog24/gpt-video-transcriber/utils"
 
 	"flag"
 
@@ -33,7 +33,7 @@ func main() {
 
 	// Create .tmp directory if it doesn't exist
 	tmpDir := ".tmp"
-	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(tmpDir, 0750); err != nil {
 		log.Fatalf("Failed to create .tmp directory: %v", err)
 	}
 
@@ -96,7 +96,11 @@ func main() {
 		if _, err := os.Stat(audioFile); err == nil {
 			fmt.Printf("File '%s' already exists. Overwrite? [y/N] ", audioFile)
 			var response string
-			fmt.Scanln(&response)
+			_, err := fmt.Scanln(&response)
+			if err != nil {
+				fmt.Printf("Error reading input: %v\n", err)
+				return
+			}
 			if strings.ToLower(response) != "y" {
 				fmt.Println("Not overwriting - exiting")
 				return

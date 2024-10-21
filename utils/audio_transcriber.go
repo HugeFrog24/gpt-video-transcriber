@@ -78,13 +78,17 @@ func splitAudio(ctx context.Context, audioFile string, maxDuration time.Duration
 		start := time.Duration(i) * maxDuration
 		chunkFile := fmt.Sprintf("%s_chunk_%d.wav", strings.TrimSuffix(audioFile, filepath.Ext(audioFile)), i)
 
-		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", audioFile, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFile)
+		// Sanitize inputs
+		audioFileSafe := filepath.Clean(audioFile)
+		chunkFileSafe := filepath.Clean(chunkFile)
+
+		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", audioFileSafe, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFileSafe)
 		err := cmd.Run()
 		if err != nil {
 			return chunks, fmt.Errorf("failed to create audio chunk: %v", err)
 		}
 
-		chunks = append(chunks, chunkFile)
+		chunks = append(chunks, chunkFileSafe)
 	}
 
 	return chunks, nil

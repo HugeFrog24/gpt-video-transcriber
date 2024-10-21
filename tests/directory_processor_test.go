@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-	"transcription/utils"
+
+	"github.com/HugeFrog24/gpt-video-transcriber/utils"
 )
 
 func TestProcessDirectory(t *testing.T) {

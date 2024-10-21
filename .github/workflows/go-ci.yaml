@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Go environment
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23' # Specify the Go version you are using
+
+      # Cache Go modules
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # Install Dependencies
+      - name: Install Dependencies
+        run: go mod tidy
+
+      # Run Linters using golangci-lint
+      - name: Lint Code
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60 # Specify the version of golangci-lint
+          args: --timeout 5m
+
+      # Run Tests with Coverage
+      - name: Run Tests
+        run: |
+          mkdir -p coverage
+          go test ./... -coverprofile=coverage.out -v
+
+      # Security Analysis using gosec
+      - name: Security Scan
+        uses: securego/gosec@master
+        with:
+          args: ./...
