@@ -13,17 +13,17 @@ jobs:
     steps:
       # Checkout the repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Set up Go environment
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.23' # Specify the Go version you are using
 
       # Cache Go modules
       - name: Cache Go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/go-build
@@ -43,14 +43,12 @@ jobs:
           version: v1.60 # Specify the version of golangci-lint
           args: --timeout 5m
 
-      # Run Tests with Coverage
+      # Run Tests
       - name: Run Tests
-        run: |
-          mkdir -p coverage
-          go test ./... -coverprofile=coverage.out -v
+        run: go test ./... -v
 
       # Security Analysis using gosec
       - name: Security Scan
         uses: securego/gosec@master
         with:
-          args: ./...
+          args: ./... --buildvcs=false

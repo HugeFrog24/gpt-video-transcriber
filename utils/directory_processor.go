@@ -36,7 +36,7 @@ var videoExtensions = map[string]bool{
 
 func ProcessDirectory(
 	ctx context.Context,
-	dir string,
+	rootDir string,
 	outputXML string,
 	descriptionAttempts int,
 	extractor AudioExtractor,
@@ -60,7 +60,7 @@ func ProcessDirectory(
 		}
 	}
 
-	// Create a map of processed files to their results
+	// Create a map of processed files using relative paths
 	processedFiles := make(map[string]*TranscriptionResult)
 	for i, result := range results.Results {
 		processedFiles[result.VideoFile] = &results.Results[i]
@@ -71,22 +71,31 @@ func ProcessDirectory(
 		return TranscriptionResults{}, fmt.Errorf("failed to create .tmp directory: %v", err)
 	}
 
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if !d.IsDir() {
 			ext := strings.ToLower(filepath.Ext(d.Name()))
 			if videoExtensions[ext] {
+				// Compute relative path
+				relPath, err := filepath.Rel(rootDir, path)
+				if err != nil {
+					return fmt.Errorf("failed to compute relative path for '%s': %v", path, err)
+				}
+
+				// Replace backslashes with slashes for consistency across OSes
+				relPath = filepath.ToSlash(relPath)
+
 				// Check if the file has been processed
-				existingResult, exists := processedFiles[path]
+				existingResult, exists := processedFiles[relPath]
 				if exists && len(existingResult.Descriptions) >= descriptionAttempts {
-					fmt.Printf("File '%s' already processed with sufficient descriptions. Skipping...\n", path)
+					fmt.Printf("File '%s' already processed with sufficient descriptions. Skipping...\n", relPath)
 					return nil
 				}
 
 				// Process the video file (pass existing result if any)
-				result, err := processVideoFile(ctx, path, descriptionAttempts, extractor, transcriber, generator, evaluator, existingResult)
+				result, err := processVideoFile(ctx, path, relPath, descriptionAttempts, extractor, transcriber, generator, evaluator, existingResult)
 				if err != nil {
 					return fmt.Errorf("failed to process video file '%s': %v", path, err)
 				}
@@ -118,6 +127,7 @@ func ProcessDirectory(
 func processVideoFile(
 	ctx context.Context,
 	videoFile string,
+	relativePath string,
 	descriptionAttempts int,
 	extractor AudioExtractor,
 	transcriber AudioTranscriber,
@@ -131,13 +141,13 @@ func processVideoFile(
 	if existingResult != nil {
 		result = *existingResult
 	} else {
-		result.VideoFile = videoFile
+		result.VideoFile = relativePath
 	}
 
 	// If there is no transcription, we need to extract audio and transcribe
 	if result.Transcription == "" {
 		// Generate a unique audio file name
-		audioFile := filepath.Join(".tmp", fmt.Sprintf("%s_%d.wav", strings.TrimSuffix(filepath.Base(videoFile), filepath.Ext(videoFile)), time.Now().UnixNano()))
+		audioFile := filepath.Join(".tmp", fmt.Sprintf("%s_%d.wav", strings.TrimSuffix(filepath.Base(relativePath), filepath.Ext(relativePath)), time.Now().UnixNano()))
 
 		// Use the injected extractor
 		hasAudio, err := extractor.ExtractAudio(ctx, videoFile, audioFile)
@@ -145,9 +155,9 @@ func processVideoFile(
 			return TranscriptionResult{}, fmt.Errorf("failed to extract audio: %v", err)
 		}
 		if !hasAudio {
-			fmt.Printf("Skipping file '%s' as it has no audio stream\n", videoFile)
+			fmt.Printf("Skipping file '%s' as it has no audio stream\n", relativePath)
 			return TranscriptionResult{
-				VideoFile: videoFile,
+				VideoFile: relativePath,
 				AudioFile: "No audio",
 			}, nil
 		}
@@ -168,7 +178,7 @@ func processVideoFile(
 
 	if descriptionsToGenerate > 0 {
 		// Use the injected generator to generate missing descriptions
-		newDescriptions, err := generator.GenerateDescriptions(result.Transcription, filepath.Base(videoFile), descriptionsToGenerate)
+		newDescriptions, err := generator.GenerateDescriptions(result.Transcription, filepath.Base(relativePath), descriptionsToGenerate)
 		if err != nil {
 			return TranscriptionResult{}, fmt.Errorf("failed to generate descriptions: %v", err)
 		}
@@ -186,14 +196,14 @@ func processVideoFile(
 		}
 
 		// Re-evaluate descriptions
-		bestIndex, err := evaluator.EvaluateDescriptions(getDescriptionContents(result.Descriptions), result.Transcription, filepath.Base(videoFile))
+		bestIndex, err := evaluator.EvaluateDescriptions(getDescriptionContents(result.Descriptions), result.Transcription, filepath.Base(relativePath))
 		if err != nil {
 			return TranscriptionResult{}, fmt.Errorf("failed to evaluate descriptions: %v", err)
 		}
 		result.BestDescriptionIndex = bestIndex
 		fmt.Printf("Suggested best description: %d\n", bestIndex)
 	} else {
-		fmt.Printf("Already have required number of descriptions for '%s'\n", videoFile)
+		fmt.Printf("Already have required number of descriptions for '%s'\n", relativePath)
 	}
 
 	return result, nil

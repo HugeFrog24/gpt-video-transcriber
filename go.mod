@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/pemistahl/lingua-go v1.4.0
-	github.com/sashabaranov/go-openai v1.32.0
+	github.com/sashabaranov/go-openai v1.32.3
 )
 
 require (
