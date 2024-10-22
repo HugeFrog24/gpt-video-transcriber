@@ -51,4 +51,4 @@ jobs:
       - name: Security Scan
         uses: securego/gosec@master
         with:
-          args: ./... --buildvcs=false
+          args: ./... -buildvcs=false
