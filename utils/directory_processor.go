@@ -58,9 +58,15 @@ func ProcessDirectory(
 		if err := decoder.Decode(&results); err != nil {
 			return TranscriptionResults{}, fmt.Errorf("failed to decode existing XML: %v", err)
 		}
+
+		// Normalize paths in existing results
+		for i := range results.Results {
+			results.Results[i].VideoFile = filepath.ToSlash(filepath.Clean(results.Results[i].VideoFile))
+			results.Results[i].AudioFile = filepath.ToSlash(filepath.Clean(results.Results[i].AudioFile))
+		}
 	}
 
-	// Create a map of processed files using relative paths
+	// Create a map of processed files using normalized paths
 	processedFiles := make(map[string]*TranscriptionResult)
 	for i, result := range results.Results {
 		processedFiles[result.VideoFile] = &results.Results[i]
@@ -78,24 +84,22 @@ func ProcessDirectory(
 		if !d.IsDir() {
 			ext := strings.ToLower(filepath.Ext(d.Name()))
 			if videoExtensions[ext] {
-				// Compute relative path
+				// Compute relative path and normalize it
 				relPath, err := filepath.Rel(rootDir, path)
 				if err != nil {
 					return fmt.Errorf("failed to compute relative path for '%s': %v", path, err)
 				}
+				normalizedPath := filepath.ToSlash(filepath.Clean(relPath))
 
-				// Replace backslashes with slashes for consistency across OSes
-				relPath = filepath.ToSlash(relPath)
-
-				// Check if the file has been processed
-				existingResult, exists := processedFiles[relPath]
+				// Check if the file has been processed using normalized path
+				existingResult, exists := processedFiles[normalizedPath]
 				if exists && len(existingResult.Descriptions) >= descriptionAttempts {
-					fmt.Printf("File '%s' already processed with sufficient descriptions. Skipping...\n", relPath)
+					fmt.Printf("File '%s' already processed with sufficient descriptions. Skipping...\n", normalizedPath)
 					return nil
 				}
 
 				// Process the video file (pass existing result if any)
-				result, err := processVideoFile(ctx, path, relPath, descriptionAttempts, extractor, transcriber, generator, evaluator, existingResult)
+				result, err := processVideoFile(ctx, path, normalizedPath, descriptionAttempts, extractor, transcriber, generator, evaluator, existingResult)
 				if err != nil {
 					return fmt.Errorf("failed to process video file '%s': %v", path, err)
 				}
@@ -146,8 +150,8 @@ func processVideoFile(
 
 	// If there is no transcription, we need to extract audio and transcribe
 	if result.Transcription == "" {
-		// Generate a unique audio file name
-		audioFile := filepath.Join(".tmp", fmt.Sprintf("%s_%d.wav", strings.TrimSuffix(filepath.Base(relativePath), filepath.Ext(relativePath)), time.Now().UnixNano()))
+		// Generate a unique audio file name and normalize it
+		audioFile := filepath.ToSlash(filepath.Clean(filepath.Join(".tmp", fmt.Sprintf("%s_%d.wav", strings.TrimSuffix(filepath.Base(relativePath), filepath.Ext(relativePath)), time.Now().UnixNano()))))
 
 		// Use the injected extractor
 		hasAudio, err := extractor.ExtractAudio(ctx, videoFile, audioFile)

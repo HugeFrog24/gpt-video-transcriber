@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GOFLAGS: '-buildvcs=false'
 
     steps:
       # Checkout the repository
@@ -51,4 +53,4 @@ jobs:
       - name: Security Scan
         uses: securego/gosec@master
         with:
-          args: ./... --buildvcs=false
+          args: ./...
