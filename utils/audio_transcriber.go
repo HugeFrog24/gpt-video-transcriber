@@ -30,7 +30,11 @@ func (RealAudioTranscriber) TranscribeAudio(ctx context.Context, audioFile strin
 
 	// Ensure all temporary chunk files are cleaned up
 	for _, chunk := range chunks {
-		defer os.Remove(chunk)
+		defer func(chunkPath string) {
+			if err := os.Remove(chunkPath); err != nil {
+				fmt.Printf("Failed to remove temporary audio chunk %s: %v\n", chunkPath, err)
+			}
+		}(chunk)
 	}
 
 	var fullTranscription strings.Builder
