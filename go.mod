@@ -1,15 +1,15 @@
 module github.com/HugeFrog24/gpt-video-transcriber
 
-go 1.23
+go 1.24.2
 
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/pemistahl/lingua-go v1.4.0
-	github.com/sashabaranov/go-openai v1.32.0
+	github.com/sashabaranov/go-openai v1.40.5
 )
 
 require (
 	github.com/shopspring/decimal v1.4.0 // indirect
-	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c // indirect
-	google.golang.org/protobuf v1.35.1 // indirect
+	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792 // indirect
+	google.golang.org/protobuf v1.36.7 // indirect
 )

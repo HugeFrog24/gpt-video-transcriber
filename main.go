@@ -45,6 +45,12 @@ func main() {
 	}
 	inputPath := flag.Arg(0)
 
+	// Get the absolute path of the input
+	absInputPath, err := filepath.Abs(inputPath)
+	if err != nil {
+		log.Fatalf("Failed to get absolute path: %v", err)
+	}
+
 	// Create a context that is cancelled on interrupt signal
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -61,7 +67,7 @@ func main() {
 	}()
 
 	// Check if the input path is a directory or a file
-	info, err := os.Stat(inputPath)
+	info, err := os.Stat(absInputPath)
 	if err != nil {
 		log.Fatalf("Failed to stat input path: %v", err)
 	}
@@ -75,7 +81,7 @@ func main() {
 		}
 		results, err := utils.ProcessDirectory(
 			ctx,
-			inputPath,
+			absInputPath,
 			outputXML,
 			*descriptionCount,
 			&utils.RealAudioExtractor{},
@@ -108,7 +114,7 @@ func main() {
 		}
 
 		extractor := &utils.RealAudioExtractor{}
-		hasAudio, err := extractor.ExtractAudio(ctx, inputPath, audioFile)
+		hasAudio, err := extractor.ExtractAudio(ctx, absInputPath, audioFile)
 		if err != nil {
 			log.Fatalf("Failed to extract audio: %v", err)
 		}
@@ -125,7 +131,7 @@ func main() {
 
 		fmt.Println("Transcription:", transcription)
 
-		descriptions, err := utils.GenerateDescriptions(transcription, filepath.Base(inputPath), *descriptionCount)
+		descriptions, err := utils.GenerateDescriptions(transcription, filepath.Base(absInputPath), *descriptionCount)
 		if err != nil {
 			log.Fatalf("Failed to generate descriptions: %v", err)
 		}
