@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pemistahl/lingua-go"
+	lingua "github.com/pemistahl/lingua-go"
 	openai "github.com/sashabaranov/go-openai"
 )
 

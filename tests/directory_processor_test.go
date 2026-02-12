@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-	"transcription/utils"
+
+	"github.com/HugeFrog24/gpt-video-transcriber/utils"
 )
 
 func TestProcessDirectory(t *testing.T) {
@@ -16,7 +17,11 @@ func TestProcessDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", err)
 	}
-	defer os.RemoveAll(testDir)
+	defer func() {
+		if err := os.RemoveAll(testDir); err != nil {
+			t.Logf("Failed to remove test directory: %v", err)
+		}
+	}()
 
 	outputXML := filepath.Join(testDir, "test_output.xml")
 
@@ -33,7 +38,11 @@ func TestProcessDirectory(t *testing.T) {
 	if err := os.MkdirAll(".tmp", os.ModePerm); err != nil {
 		t.Fatalf("Failed to create .tmp directory: %v", err)
 	}
-	defer os.RemoveAll(".tmp") // Clean up after test
+	defer func() {
+		if err := os.RemoveAll(".tmp"); err != nil {
+			t.Logf("Failed to remove .tmp directory: %v", err)
+		}
+	}() // Clean up after test
 
 	// Mock implementations
 	mockExtractor := &utils.MockAudioExtractor{
