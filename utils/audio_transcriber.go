@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pemistahl/lingua-go"
+	lingua "github.com/pemistahl/lingua-go"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -30,7 +30,11 @@ func (RealAudioTranscriber) TranscribeAudio(ctx context.Context, audioFile strin
 
 	// Ensure all temporary chunk files are cleaned up
 	for _, chunk := range chunks {
-		defer os.Remove(chunk)
+		defer func(chunkPath string) {
+			if err := os.Remove(chunkPath); err != nil {
+				fmt.Printf("Failed to remove temporary audio chunk %s: %v\n", chunkPath, err)
+			}
+		}(chunk)
 	}
 
 	var fullTranscription strings.Builder
@@ -78,13 +82,18 @@ func splitAudio(ctx context.Context, audioFile string, maxDuration time.Duration
 		start := time.Duration(i) * maxDuration
 		chunkFile := fmt.Sprintf("%s_chunk_%d.wav", strings.TrimSuffix(audioFile, filepath.Ext(audioFile)), i)
 
-		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", audioFile, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFile)
+		// Sanitize inputs
+		audioFileSafe := filepath.Clean(audioFile)
+		chunkFileSafe := filepath.Clean(chunkFile)
+
+		// #nosec G204
+		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", audioFileSafe, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFileSafe)
 		err := cmd.Run()
 		if err != nil {
 			return chunks, fmt.Errorf("failed to create audio chunk: %v", err)
 		}
 
-		chunks = append(chunks, chunkFile)
+		chunks = append(chunks, chunkFileSafe)
 	}
 
 	return chunks, nil

@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  # Required: allow read access to the content for analysis
+  contents: read
+  # Optional: allow read access to pull request for commenting issues
+  pull-requests: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GOFLAGS: '-buildvcs=false'
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Set up Go environment
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26' # Specify the Go version you are using
+
+      # Cache Go modules
+      - name: Cache Go modules
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # Install Dependencies
+      - name: Install Dependencies
+        run: go mod tidy
+
+      # Run Linters using golangci-lint
+      - name: Lint Code
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.10.1
+          args: --timeout 5m
+
+      # Run Tests
+      - name: Run Tests
+        run: go test ./... -v
+
+      # Security Analysis using gosec
+      - name: Security Scan
+        uses: securego/gosec@v2.24.7
+        with:
+          args: ./...
