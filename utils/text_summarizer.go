@@ -6,7 +6,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/pemistahl/lingua-go"
+	lingua "github.com/pemistahl/lingua-go"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -77,7 +77,7 @@ func (ts *TextSummarizer) summarizeChunk(chunk string) (string, error) {
 				Content: prompt,
 			},
 		},
-		MaxTokens: 500,
+		MaxCompletionTokens: 500,
 	}
 
 	resp, err := ts.client.CreateChatCompletion(ctx, req)

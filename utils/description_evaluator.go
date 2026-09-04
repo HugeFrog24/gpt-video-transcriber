@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pemistahl/lingua-go"
+	lingua "github.com/pemistahl/lingua-go"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -64,7 +64,7 @@ Remember, respond with ONLY the number of the best description, nothing else.`, 
 					Content: prompt,
 				},
 			},
-			MaxTokens: 10,
+			MaxCompletionTokens: 10,
 		}
 
 		resp, err := e.client.CreateChatCompletion(ctx, req)
@@ -88,7 +88,7 @@ Remember, respond with ONLY the number of the best description, nothing else.`, 
 func formatDescriptions(descriptions []string) string {
 	var result strings.Builder
 	for i, desc := range descriptions {
-		result.WriteString(fmt.Sprintf("%d. %s\n\n", i+1, desc))
+		fmt.Fprintf(&result, "%d. %s\n\n", i+1, desc)
 	}
 	return result.String()
 }

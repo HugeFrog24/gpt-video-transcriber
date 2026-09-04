@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"transcription/utils"
+	"github.com/HugeFrog24/gpt-video-transcriber/utils"
 
 	"flag"
 
@@ -33,7 +33,7 @@ func main() {
 
 	// Create .tmp directory if it doesn't exist
 	tmpDir := ".tmp"
-	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(tmpDir, 0750); err != nil {
 		log.Fatalf("Failed to create .tmp directory: %v", err)
 	}
 
@@ -44,6 +44,12 @@ func main() {
 		log.Fatal("Usage: go run main.go [-descriptions <number>] \"<video_file_path_or_directory>\"")
 	}
 	inputPath := flag.Arg(0)
+
+	// Get the absolute path of the input
+	absInputPath, err := filepath.Abs(inputPath)
+	if err != nil {
+		log.Fatalf("Failed to get absolute path: %v", err)
+	}
 
 	// Create a context that is cancelled on interrupt signal
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,7 +67,7 @@ func main() {
 	}()
 
 	// Check if the input path is a directory or a file
-	info, err := os.Stat(inputPath)
+	info, err := os.Stat(absInputPath)
 	if err != nil {
 		log.Fatalf("Failed to stat input path: %v", err)
 	}
@@ -75,7 +81,7 @@ func main() {
 		}
 		results, err := utils.ProcessDirectory(
 			ctx,
-			inputPath,
+			absInputPath,
 			outputXML,
 			*descriptionCount,
 			&utils.RealAudioExtractor{},
@@ -96,7 +102,11 @@ func main() {
 		if _, err := os.Stat(audioFile); err == nil {
 			fmt.Printf("File '%s' already exists. Overwrite? [y/N] ", audioFile)
 			var response string
-			fmt.Scanln(&response)
+			_, err := fmt.Scanln(&response)
+			if err != nil {
+				fmt.Printf("Error reading input: %v\n", err)
+				return
+			}
 			if strings.ToLower(response) != "y" {
 				fmt.Println("Not overwriting - exiting")
 				return
@@ -104,7 +114,7 @@ func main() {
 		}
 
 		extractor := &utils.RealAudioExtractor{}
-		hasAudio, err := extractor.ExtractAudio(ctx, inputPath, audioFile)
+		hasAudio, err := extractor.ExtractAudio(ctx, absInputPath, audioFile)
 		if err != nil {
 			log.Fatalf("Failed to extract audio: %v", err)
 		}
@@ -121,7 +131,7 @@ func main() {
 
 		fmt.Println("Transcription:", transcription)
 
-		descriptions, err := utils.GenerateDescriptions(transcription, filepath.Base(inputPath), *descriptionCount)
+		descriptions, err := utils.GenerateDescriptions(transcription, filepath.Base(absInputPath), *descriptionCount)
 		if err != nil {
 			log.Fatalf("Failed to generate descriptions: %v", err)
 		}

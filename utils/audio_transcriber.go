@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pemistahl/lingua-go"
+	lingua "github.com/pemistahl/lingua-go"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -30,7 +30,11 @@ func (RealAudioTranscriber) TranscribeAudio(ctx context.Context, audioFile strin
 
 	// Ensure all temporary chunk files are cleaned up
 	for _, chunk := range chunks {
-		defer os.Remove(chunk)
+		defer func(chunkPath string) {
+			if err := os.Remove(chunkPath); err != nil {
+				fmt.Printf("Failed to remove temporary audio chunk %s: %v\n", chunkPath, err)
+			}
+		}(chunk)
 	}
 
 	var fullTranscription strings.Builder
@@ -65,8 +69,15 @@ func (RealAudioTranscriber) TranscribeAudio(ctx context.Context, audioFile strin
 func splitAudio(ctx context.Context, audioFile string, maxDuration time.Duration) ([]string, error) {
 	var chunks []string
 
+	// Sanitize input. Clean runs first because it strips a leading "./" and can
+	// expose a "-" that ffmpeg would then read as an option.
+	audioFileSafe := filepath.Clean(audioFile)
+	if err := checkMediaPath("audio", audioFileSafe); err != nil {
+		return nil, err
+	}
+
 	// Get audio duration
-	duration, err := getAudioDuration(audioFile)
+	duration, err := getAudioDuration(audioFileSafe)
 	if err != nil {
 		return nil, err
 	}
@@ -76,22 +87,32 @@ func splitAudio(ctx context.Context, audioFile string, maxDuration time.Duration
 
 	for i := 0; i < numChunks; i++ {
 		start := time.Duration(i) * maxDuration
-		chunkFile := fmt.Sprintf("%s_chunk_%d.wav", strings.TrimSuffix(audioFile, filepath.Ext(audioFile)), i)
+		chunkFileSafe := fmt.Sprintf("%s_chunk_%d.wav", strings.TrimSuffix(audioFileSafe, filepath.Ext(audioFileSafe)), i)
 
-		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", audioFile, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFile)
+		// #nosec G204 -- the binary is a fixed literal, audioFileSafe is checked above,
+		// and chunkFileSafe only appends a suffix to it, so both stay plain file names.
+		// exec.CommandContext passes argv to the OS directly, so no shell interprets them.
+		cmd := exec.CommandContext(ctx, "ffmpeg", "-i", audioFileSafe, "-ss", fmt.Sprintf("%f", start.Seconds()), "-t", fmt.Sprintf("%f", maxDuration.Seconds()), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", chunkFileSafe)
 		err := cmd.Run()
 		if err != nil {
 			return chunks, fmt.Errorf("failed to create audio chunk: %v", err)
 		}
 
-		chunks = append(chunks, chunkFile)
+		chunks = append(chunks, chunkFileSafe)
 	}
 
 	return chunks, nil
 }
 
 func getAudioDuration(audioFile string) (time.Duration, error) {
-	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", audioFile)
+	audioFileSafe := filepath.Clean(audioFile)
+	if err := checkMediaPath("audio", audioFileSafe); err != nil {
+		return 0, err
+	}
+
+	// #nosec G204 -- the binary is a fixed literal and the path is checked above;
+	// exec.Command passes argv to the OS directly, so no shell interprets it.
+	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", audioFileSafe)
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get audio duration: %v", err)

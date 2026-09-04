@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pemistahl/lingua-go"
+	lingua "github.com/pemistahl/lingua-go"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -57,7 +57,7 @@ func GenerateDescriptions(transcription string, filename string, attempts int) (
 					Content: fmt.Sprintf("Based on the following transcription and filename, generate a clear and concise description for the video (maximum %d characters).\n\nFilename: %s\n\nTranscription:\n%s", maxDescriptionLength, filename, summarizedTranscription),
 				},
 			},
-			MaxTokens: maxDescriptionLength,
+			MaxCompletionTokens: maxDescriptionLength,
 		}
 
 		resp, err := client.CreateChatCompletion(ctx, req)
